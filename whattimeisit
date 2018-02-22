@@ -1,0 +1,66 @@
+#!/bin/bash
+
+cf="$HOME/.whattimeisit.conf"
+
+# check if stdout is a terminal...
+if test -t 1; then
+
+    # see if it supports colors...
+    ncolors=$(tput colors)
+
+    if test -n "$ncolors" && test $ncolors -ge 8; then
+        BOLD=$'\e[1m'
+        STANDOUT=$'\e[7m'
+        UNDERLINE=$'\e[4m'
+        NORMAL=$'\e[0m'
+        RED=$'\e[0;31m'
+        LRED=$'\e[1;31m'
+        GREEN=$'\e[0;32m'
+        LGREEN=$'\e[1;32m'
+        YELLOW=$'\e[0;33m'
+        LYELLOW=$'\e[1;33m'
+        BLUE=$'\e[0;34m'
+        LBLUE=$'\e[1;34m'
+        MAGENTA=$'\e[0;35m'
+        LMAGENTA=$'\e[1;35m'
+        CYAN=$'\e[0;36m'
+        LCYAN=$'\e[1;36m'
+    fi
+fi
+
+
+showclock () {
+    local count=0
+    local hour=$1
+    while [[ count -lt 24 ]]; do
+        if [[ $count -eq 23 ]]; then
+            echo -n $GREEN
+        fi
+        printf "%02i " $hour
+        ((hour++))
+        if [[ $hour -ge 24 ]]; then
+            hour=0
+        fi
+        ((count++))
+    done
+    echo $NORMAL
+}
+
+declare -A zones
+homezone='nowhere'
+while read tz city tag; do
+    zones[$tz]=$city
+    if [[ $tag == '(home)' ]]; then
+        homezone=$tz
+    fi
+done < <(grep -v '^#' $cf)
+
+for zone in ${!zones[@]}; do
+    if [[ $zone == $homezone ]]; then
+        echo -n $BOLD
+    fi
+    printf "%-8s %-10s: " $zone ${zones[$zone]}
+    showclock $(TZ=$zone date --date='-now-23hours' '+%k')
+done |sort -nk4
+
+exit
